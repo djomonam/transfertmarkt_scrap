@@ -1,12 +1,11 @@
-# transfertmarkt_scraping
-Utilitaire de web scraping du site transfertmarkt
+# transfertmarkt_scrap
+Web scraping utility for the transfertmarkt.de website
 
 
-L'idée est que le site transfertmarkt.fr met à disposition de tous sur internet une base de données gigantesque sur le football
+The idea is that the transfertmarkt.de website provides  a gigantic database on football.
 
-Dans le cadre d'un projet de rechercher à l'École polytechnique, nous voulons récupérer les données du site pour les analyser et dégager des tendances sur le monde du football
+I want to retrieve data from the site to analyse it and identify trends in the world of football.
 
-Ce fichier se présente sous la forme d'une librairie mal documentée  (un ensemble de fonction avec des noms plus ou moins explicites)
+This file is in the form of a poorly documented library (a set of functions with more or less explicit names).
 
-C'est une très bonne base pour commencer à comprendre comment faire du webscraping sous python avec BeautifulSoup
-
+This is a very good base to start understanding how to do python webscraping with BeautifulSoup.
