@@ -1,2 +1,2 @@
 # transfertmarkt_scrap
-python script to scrap data on Transfert mark
+python script to scrap data from https://www.transfermarkt.de
