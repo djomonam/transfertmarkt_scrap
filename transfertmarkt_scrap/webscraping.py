@@ -12,6 +12,7 @@ from bs4 import BeautifulSoup
 import urllib
 import json
 import time
+import string
 
 ##Data Collection
 class Ligue(object):	
@@ -27,7 +28,7 @@ class Club(object):
 	def save(self):
 		soup = BeautifulSoup(self.html,features='html.parser')
 		titre = soup.find("title").text
-		a = open("transfertmarkt_scraping/clubs/" + nettoyer(titre.split(' -')[0]) + ".html","wb")
+		a = open("transfertmarkt_scrap/clubs/" + nettoyer(titre.split(' -')[0]) + ".html","wb")
 		a.write(self.html)
 		a.close()		
 
@@ -40,7 +41,7 @@ class Player(object):
 		soup = BeautifulSoup(self.html,features='html.parser')
 		titre = soup.find("head").find("title")
 		if titre is not None:
-			a = open("transfertmarkt_scraping/players/" + nettoyer(titre.text.split(' -')[0]) + ".html","wb")
+			a = open("transfertmarkt_scrap/players/" + nettoyer(titre.text.split(' -')[0]) + ".html","wb")
 			a.write(self.html)
 			a.close()
 		
@@ -140,8 +141,10 @@ def getPlayers(club):
 ##Traitement
 def nettoyer(x):
 	textToClean = x.replace("\n","").replace("\t","").replace("\r","").replace("\xa0","")
-	textToClean = textToClean.translate(strring.makettrans("",""),string.ponctuation)
-	return textToclean
+	textToClean = textToClean.translate(textToClean.maketrans(string.punctuation,"".join([" " for o in string.punctuation])))
+	return textToClean.replace("  "," ").replace("  "," ")
+def clean_date(x):
+	return x.replace("\n","").replace("\t","").replace("\r","").replace("\xa0","")
 
 def convert_prix(x):
 	a = x.split(" mio")
@@ -158,7 +161,7 @@ def convert_prix(x):
 		return str(x)
 
 def convert_date(x):
-	a = x.split("/")
+	a = x.split("/") # because the nettoyer function delete the / in date format
 	if len(a) == 1:
 		return a[0]
 	b = a[1]
@@ -166,9 +169,9 @@ def convert_date(x):
 		return b
 	else:
 		if int(b) < 22 and len(a[0]) <= 2:
-			return "20"+b
+			return "20"+str(b)
 		else:
-			return "19"+b
+			return "19"+str(b)
 
 def extract_club_data(html):
 	soup = BeautifulSoup(html)
@@ -204,7 +207,7 @@ def extract_all_club_data():
 	b = open("clubs.csv","a")
 	for fichier_club in fichiers:
 		A += 1
-		a = open("clubs/" + fichier_club,"rb")
+		a = open("transfertmarkt_scrap/clubs/" + fichier_club,"rb")
 		data = extract_club_data(a.read())
 		try:
 			ligne = data[0]
@@ -220,7 +223,9 @@ def extract_all_club_data():
 def extract_player_data(html):
 	soup = BeautifulSoup(html,'html.parser')
 	url = soup.find("meta",attrs={"property":"og:url"})["content"]
+	url= url.replace("_","www.transfermarkt.de")
 	uri_player = url
+	print(url)
 	nom_joueur = soup.find("title").text.split(" -")[0]
 	print(nom_joueur)
 	html_valeur = soup.find("div",class_="dataMarktwert")
@@ -238,15 +243,15 @@ def extract_player_data(html):
 	if "name" in ligne1.lower():
 		nom_origine_joueur = tableau[0].find("td").text
 	for i in range(len(tableau)):
-		key = nettoyer(tableau[i].find("th").text)
+		key = clean_date(tableau[i].find("th").text)
 		if "geburtsdatum" in key.lower():
 			geburtsdatum = tableau[i].find("td").find("a")["href"].split("/")[-1]
 		elif "nationalit" in key.lower(): 
-			nationalite = nettoyer(tableau[i].find("td").find("img")["alt"])
+			nationalite = clean_date(tableau[i].find("td").find("img")["alt"])
 		elif "position" in key.lower() :
-			position = nettoyer(tableau[i].find("td").text)
+			position = clean_date(tableau[i].find("td").text)
 		elif "verein" in key.lower() :
-			club_actuel = nettoyer(tableau[i].find("td").text)[1:-1]
+			club_actuel = clean_date(tableau[i].find("td").text)[1:-1]
 			uri_club = "https://www.transfermarkt.de" + tableau[i].find("td").find("a")["href"].split("startseite/")[0]
 			break
 			
@@ -255,18 +260,19 @@ def extract_player_data(html):
 	headers = {"User-Agent":"Mozilla/5.0"}
 	requete = requests.get(url_palmares, headers=headers)
 	html_palmares = requete.content
-	soup = BeautifulSoup(html_palmares)
+	soup = BeautifulSoup(html_palmares,'html.parser')
 	palmares = soup.find_all("div",class_="erfolg_info_box")
-	palmares_text = [nettoyer(p.find("td","erfolg_table_saison").text) for p in palmares]
-	trophes = [0 for i in range(0,2020-1980)]
+	palmares_text = [clean_date(p.find("td","erfolg_table_saison").text) for p in palmares]
+	trophes = [0 for i in range(0,2022-1980)]
 	for saison in palmares_text:
 		annee = int(convert_date(saison))
 		if annee >= 1980:
+			print(annee)
 			trophes[annee-1980] += 1
 	return [uri_player,nom_joueur,nom_origine_joueur,geburtsdatum,nationalite,position,club_actuel,uri_club,valeur] + trophes
 	
 def extract_all_player_data():
-	fichiers = os.listdir("joueurs")      
+	fichiers = os.listdir("transfertmarkt_scrap/players")      
 	B = len(fichiers)
 	A = 8252
 	b = open("joueurs.csv","a")
@@ -278,7 +284,7 @@ def extract_all_player_data():
 			t2 = time.time()
 			print("Temps restant estimé : " + str((B - A) / 6000 * (t2 - t1)))
 			t1 = t2
-		a = open("transfertmarkt_scraping/players/" + fichier_joueur,"rb")
+		a = open("transfertmarkt_scrap/players/" + fichier_joueur,"rb")
 		data = extract_player_data(a.read())
 		try:
 			ligne = data[0]
